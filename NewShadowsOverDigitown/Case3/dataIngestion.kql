@@ -1,0 +1,10 @@
+.execute database script <|
+// Create the table with the traffic information.
+// The data loading process estimated to take ~3-4min to complete (114M+ rows of data).
+// Notes: VIN - is Vehicle ID 
+.create-merge table Traffic (Timestamp:datetime, VIN:string, Ave:int, Street:int)
+//clear any previously ingested data if such exists
+.clear table Traffic data
+.ingest async into table Traffic (@'https://kustodetectiveagency.blob.core.windows.net/digitown-traffic/log_00000.csv.gz')
+.ingest async into table Traffic (@'https://kustodetectiveagency.blob.core.windows.net/digitown-traffic/log_00001.csv.gz')
+.ingest into table Traffic (@'https://kustodetectiveagency.blob.core.windows.net/digitown-traffic/log_00002.csv.gz')

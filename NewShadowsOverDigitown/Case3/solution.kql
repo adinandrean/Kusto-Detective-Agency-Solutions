@@ -1,0 +1,32 @@
+//STEP1: understand the data
+// Let's start by looking at the data in the table Traffic:
+Traffic
+| take 10
+// We can see that the table has a timestamp, a VIN (Vehicle ID), an Ave column and a Street column.
+
+//STEP2: The hints let us know that a car is registed at a certain location if it's on the move
+// We can start by identifying moving cars during the heist to eliminate them from our investigation:
+let moving = Traffic
+| where Timestamp between ( datetime(2022-10-16T08:17:00Z) .. datetime(2022-10-16T08:30:55Z))
+| distinct VIN;
+//STEP3: We know that the robbers took off after leaving the bank and before the police arrived.
+let starting = Traffic
+| where Timestamp between ( datetime(2022-10-16T08:31:00Z)..  datetime(2022-10-16T08:41:00Z))
+| where VIN !in (moving)
+| where Ave == 157 and Street == 148
+| summarize Prima = arg_min(Timestamp, Ave, Street), Ultima = max(Timestamp) by VIN
+| distinct VIN;
+// Here, we assumed that the robbers took off exactly from the bank's location, but we can also
+// take into account the adiacent locations by replacing the line:
+// | where Ave == 157 and Street == 148
+// with the lines:
+// | where Ave between(156 .. 158) and Street between (147 .. 149)
+// | where abs(Ave -157)+abs(Street-148)<2
+//STEP4: We know that the robbers meet later, so for each VIN that started from the bank's location
+// in the time window we can calculate their final destination and see which of those VINs met
+Traffic
+| where Timestamp > datetime(2022-10-16T08:40:00Z)
+| where VIN in (starting)
+| summarize arg_max(Timestamp, Ave, Street) by VIN
+| summarize make_list(VIN) by Ave, Street
+| where array_length( list_VIN)>2
