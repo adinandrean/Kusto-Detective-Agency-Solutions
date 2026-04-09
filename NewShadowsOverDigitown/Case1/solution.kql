@@ -1,0 +1,40 @@
+//STEP1: Let's start by looking at the data in table Books:
+Books
+| take 10
+
+// STEP2: We can now select information about the missing book:
+Books
+| where book_title == "De Revolutionibus Magnis Data"
+
+// STEP3: Now let's check the other table, Shelves:
+Shelves
+| take 10
+
+// STEP4: Find discrepancies in the data
+// We can see that the Shelves table has a column named total_weight and
+// a column named rf_ids wich contains a list of rf_ids of the books that are on the shelf.
+// Let's try to find which shelf has books without an rf_id
+// We can start to compute the total weight of the books that have rf_id:
+Shelves
+| mv-expand rf_ids to typeof(string)
+| lookup Books on $left.rf_ids == $right.rf_id
+| summarize BooksWeight = sum(weight_gram) by shelf, total_weight
+| extend WeightDifference = abs(BooksWeight-total_weight)
+
+// STEP5: find the anomaly
+// We can see that the total_weight (actual weight of the books on the shelf) is a little bit different
+// than the BooksWeight we have computed (based on the book registerd weight) for a lot of shelves.
+// To accomodate this difference we can take a 10% margin of error.
+// Let's find a shelf where this difference is closer to our book weight
+let missingBookWeight =toscalar( 
+    Books
+    | where book_title == "De Revolutionibus Magnis Data"
+    | distinct weight_gram
+);
+Shelves
+| mv-expand rf_ids to typeof(string)
+| lookup (Books | project rf_id, weight_gram) on $left.rf_ids == $right.rf_id
+| summarize BooksWeight = sum(weight_gram) by shelf, total_weight
+| extend WeightDifference = abs(BooksWeight - total_weight)
+| where WeightDifference between ( missingBookWeight * 0.9 .. missingBookWeight * 1.1)
+| project shelf
