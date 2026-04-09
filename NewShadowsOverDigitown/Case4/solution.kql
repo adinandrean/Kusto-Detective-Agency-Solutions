@@ -1,0 +1,56 @@
+// This case is special, because we don't get the ingestion script as before.
+// Instead, we have to solve a riddle to get to this script and more hints.
+
+//STEP1: download and unpack the prime-numbers.csv, then add this as a table in dataexplorer
+// now let's compute the largest super prime number lower than 100M:
+Primes
+| order by Prime
+// make sure the numbers are in order before using prev/next function to compute possible super primes
+| extend PossibleSuper = Prime + prev(Prime) +1
+// we keep the numbers that are actual primes
+| join kind=inner Primes on $left.PossibleSuper == $right.Prime
+// and we select the largest one
+| order by PossibleSuper
+| take 1
+| project SuperPrime = PossibleSuper
+
+//STEP2: use this SuperPrime number to get to the next hint
+// and then ingest the provided table
+
+//STEP3: inspect the table:
+nyc_trees
+| summarize count() by spc_common
+// we have   317 Turkish hazelnut trees
+//         4,888 'Schubert' chokecherry	trees
+//         13,530 American linden trees
+
+//STEP4: we use the second hint:
+// H3 cell with size of 10 is about 66m in radius.
+// We are now searching for a cell with 1 Turkish hazlenut tree and 4 'Schubert' chokecherry trees
+let h3cell = toscalar(
+    nyc_trees
+    | where spc_common == 'Turkish hazelnut'
+    | project longitude, latitude, TurkishID = tree_id
+    | extend H3Cell = geo_point_to_h3cell(longitude, latitude, 10)
+    | join kind=inner (
+        nyc_trees
+        | where spc_common == "'Schubert' chokecherry"
+        | project longitude, latitude, CherryID = tree_id
+        | extend H3Cell = geo_point_to_h3cell(longitude, latitude, 10)
+    ) on H3Cell
+    | summarize TurkishTrees = make_set(TurkishID), CherryTrees = make_set(CherryID) by H3Cell
+    | where array_length( CherryTrees) == 4 and array_length( TurkishTrees) == 1
+    | project H3Cell
+);
+//STEP5: search for the smallest American linden tree in that cell
+nyc_trees
+| where spc_common == "American linden"
+| extend H3Cell = geo_point_to_h3cell(longitude, latitude, 10)
+| where H3Cell == h3cell
+| summarize arg_min(tree_dbh, longitude, latitude)
+
+//STEP6: now we use this tree longitude and latitude to get the link:
+VirtualTourLink(lat=40.71, lon=-73.96)
+// Then we follow the link to find "El Puente" and the key (the first line under el Puente)
+// use the key to decrypt the message
+print(Decrypt( _key="A...S", _message=@"20INznpGzmkm..."))
