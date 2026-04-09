@@ -1,0 +1,44 @@
+//STEP1: Let's check the table Votes:
+Votes
+| take 10
+// This table has a timestamp, a vote (name of the candidate), via_ip (the ip address of the voter) and a voter_hash_id (a hash of the voter information)
+
+//STEP2: Let's try to find anomalies in the votes
+// Wen can start by looking at the distribution of votes by ip address:
+Votes
+| summarize Count=count() by via_ip
+// We can see that all IPs have multiple votes
+
+//STEP3: Investigate votes made from one IP
+// We can take the IP with the most votes and look at the distribution of votes for that IP:
+let maxVotes = toscalar(
+    Votes
+    | summarize count() by via_ip
+    | sort by count_ desc 
+    |take 1
+    | project via_ip
+);
+Votes
+| where via_ip == maxVotes
+| extend TimeSeconds = bin(Timestamp, 1s)
+| summarize count()by TimeSeconds, vote
+|render timechart 
+// We can see that there is a spike of votes.
+
+//STEP4: Let's find the candidate that received the most votes in that spike to eliminate those votes
+Votes
+| extend TimeSeconds = bin(Timestamp, 1s)
+| summarize Count = count() by TimeSeconds, via_ip, vote
+| where Count > 2
+| summarize sum(Count) by vote
+
+// STEP5: compute the procentages without the fraudulent votes
+Votes
+| extend TimeSeconds = bin(Timestamp, 1s)
+| summarize ipCount = count() by TimeSeconds, via_ip, vote
+| where ipCount <= 2
+| summarize Count = sum(ipCount) by vote
+| as hint.materialized=true T
+| extend Total = toscalar(T | summarize sum(Count))
+| project vote, Percentage = round(Count*100.0 / Total, 1), Count
+| order by Count
