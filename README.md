@@ -15,8 +15,10 @@ The Kusto Detective Agency is a gamified experience where you solve data-driven 
 In these solutions, I make extensive use of:
 - **Aggregations:** `summarize`, `arg_max()`, `arg_min()`, `make_list()` etc.
 - **Joins & Lookups:** Connecting disparate datasets using `lookup` and `join`.
-- **Data Transformation:** `mv-expand`, `extend`.
-- **Time-Series & Geometry:** `bin()`, `geo_distance_2points()` etc.
+- **Data Transformation:** `mv-expand`, `extend` and **Window Functions** (`prev`/`next`)
+- **Time-Series & Geometry:** `bin()`, `geo_distance_2points()`, `geo_point_to_h3cell` etc.
+- **Data Analysis:** Time-series anomaly detection, frequency analysis, pattern recognition.
+- **Problem Solving:** Translating complex riddles and real-world scenarios into efficient queries.
 
 ---
 
