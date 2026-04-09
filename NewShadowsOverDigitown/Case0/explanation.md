@@ -1,0 +1,1 @@
+This is the introductory case designed to familiarize the user with the Kusto Help Cluster environment.

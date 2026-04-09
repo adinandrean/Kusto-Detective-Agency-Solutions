@@ -1,0 +1,7 @@
+.execute database script <|
+// Create table for the data
+.create-merge table Onboarding(Score:long)
+//clear any previously ingested data if such exists
+.clear table Onboarding data
+// Import data
+.ingest into table Onboarding ('https://kustodetectiveagency.blob.core.windows.net/onboarding/onboarding.csv.gz') with (ignoreFirstRecord=true)

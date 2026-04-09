@@ -1,0 +1,15 @@
+// 1st make sure to get the data using the ingestion script from dataIngestion.kql
+// Then make sure you are connected to the right database before running the following query
+
+// After the data is ingested, we should see that a new table was created with the name "Onboarding"
+// Let's start by looking at the data in the table to understand what it looks like
+Onboarding
+| take 10 
+
+// We can observe that the table Onboarding has a single column named "Score" which contains integer values.
+
+// To compute the sum, we can use the following query:
+Onboarding
+| summarize SumScore = sum(Score) 
+
+// We can now submit this value to move to the next case
