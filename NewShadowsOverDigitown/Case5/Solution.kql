@@ -1,0 +1,151 @@
+//STEP1: understand the data
+ChatLogs
+| take 10
+
+//STEP2: structure the data
+// We can identify some message patterns, so we can proceed to parse the message column
+
+// for example, there are messages like:
+//User 'u4403a6d4b4' sent message to the channel 'c79d44162ea'
+//User 'ub1053c28e4' sent message to the user 'u8a2a608743'
+ChatLogs
+| parse Message with "User '" SenderID "' sent message to " destType " '" DestID "'"
+// now let's see what else is left
+| where isempty( SenderID) 
+|take 10 
+
+// we can gradually add more parsing rules and check what is left, until we cover all patterns
+ChatLogs
+| parse Message with "User '" SenderID "' sent message to " destType " '" DestID "'"
+| where isempty( SenderID) 
+| parse Message with "User '" UserID "' logged in from '" SenderIP "'"
+| where isempty( UserID)
+| parse Message with "User '" UserID2 "' joined the channel '" ChannelID "'"
+| where isempty( UserID2)
+| parse Message with "User '" UserID3 "' left the channel '" ChannelID2 "'"
+| where isempty( UserID3)
+| parse Message with "User '" UserID4 "' logged out from the 'server'"
+| where isempty( UserID4)
+|take 10 
+// at this point, no rows are returned, which means we have covered all message patterns
+
+
+//STEP3: let's create columns with the parsed data
+let ParsedTable = ChatLogs
+| parse Message with "User '" SenderID "' sent message to " destType " '" DestID "'"
+| parse Message with "User '" UserID "' logged in from '" SenderIP "'"
+| parse Message with "User '" UserID2 "' joined the channel '" ChannelID "'"
+| parse Message with "User '" UserID3 "' left the channel '" ChannelID2 "'"
+| parse Message with "User '" UserID4 "' logged out from the 'server'"
+| extend 
+    User = coalesce(SenderID, UserID, UserID2, UserID3, UserID4),
+    MsgType = case(
+        isnotempty(destType) and destType has "user", "DM",
+        isnotempty(destType) and destType has "channel", "CM",
+        isnotempty( UserID), "LI",
+        isnotempty( UserID4), "LO",
+        isnotempty( UserID2), "JC",
+        isnotempty( UserID3), "LC",
+        "UNK"
+    ),
+    Dest = coalesce(DestID, ChannelID, ChannelID2)
+| project Timestamp, User, MsgType, Dest, SenderIP;
+//STEP4: find all channels that have exactly 4 users joining
+let Channels4Users = ParsedTable
+| where MsgType == "JC"
+| summarize UserSet = make_set(User) by Dest
+| where array_length( UserSet) == 4;
+//Since this step will return too many data, lets 
+//STEP5: narrow it down by selecting only exclusive channels (their users are not connected to other channles)
+let SuspectChannels = ParsedTable
+| where MsgType == "JC"
+| summarize ChannelList = make_set(Dest) by User
+| where array_length( ChannelList) == 1 // we are only interested in users that joined exactly 1 channel
+| mv-expand ChannelList to typeof(string)
+| where ChannelList in (Channels4Users)  // the channel should be among those with 4 users
+| summarize UserSet = make_set(User) by ChannelList
+| where array_length( UserSet) == 4 // the channel has 4 exclusive users
+//this will narrow it down to 7 channels
+| mv-expand (UserSet) to typeof(string )
+// we eliminate users that sent DMs, since the robbers should be communicating in the same channel and not via DM
+// Another option whould have been to only eliminate users that communicated in DMs with users that are not in the same channel
+| join kind=leftanti (
+    ParsedTable
+    | where MsgType == "DM"
+) on $left.UserSet == $right.User
+| summarize UserSet = make_set(UserSet) by ChannelList
+| where array_length( UserSet) == 4;
+//STEP6: analyze the messages
+// at this point, we are only left with 3 channels left
+// my approach was to take a look at how those channels are being used
+ParsedTable
+| where MsgType == "CM"
+| where Dest in (SuspectChannels)
+| sort by Dest, Timestamp asc 
+// After looking at the messages, it is kind of obvious that the channel 'cf053de3c7b' is the one used by the heist team
+//    they are sending messages every second day (on 7, 9 and 11) at about the same time ~2:23-2:27 PM
+//    all 4 members post one message then another one: this looks like a sync action
+//    on the other channels, we can observe one user posting way more messages than the others
+
+//STEP7: find the IPs address:
+ChatLogs
+| where Message has "logged in" and Message has "uf034c98df3"
+//or if we want to use the parsed table:
+ParsedTable
+| where User == "uf034c98df3" 
+| where MsgType == "LI"
+//We do this for all 4 users and use the IP addresses with the provided link
+// eg: https://sneakinto.z13.web.core.windows.net/119.10.30.154
+// and download all the data from those IPs (some might repeat, but each computer has something important)
+
+
+//STEP8: analyze the downloaded data and find the secret time and coordinates of the heist:
+//STEP8.0: the video: it talks about taking over a datacenter (as a joke)
+//STEP8.1:The email:
+// the email mention something about "the anger of the escaping elephant"
+// It also gives us the formula to calculate the secret date (Date1+((YYYY % 1000)days))
+//   - Date1 is the date when the projectX picture was taken
+//   - YYYY is the year of an historical nonsense event
+//STEP8.2: The PDF:
+//   - we can observe that one of the images is circled and has an X on it
+//STEP8.3: The images:
+//   - the circled image is image3.jpg
+//   - We can extract Date1 and the GPS coordinates (lat, long) from the metadata of the image
+//STEP8.4: The text file:
+//  - using the ReadMessage function provided we can find one clue. If we take a look at the function code,
+//    we can see that it looks at the key and takes the array after ':' 
+//    but it also has something to do with substring(K,9,3) wich for our key (the one from the previous case) is "PS:"
+//    I suspected there might be something hidden in the challenge description, so since it also contains "PS:" let's give it a go
+// 1) Utility to discover secondary messages.
+// Usage: ReadMessage(Message, Key)
+let ReadMessage = (Message:string, Key:string) 
+{
+    let m = Message; let K = Key; let l = toscalar(print s = split(split(K,':')[1], ',') | mv-expand s | summarize make_list(tolong(s)));
+    let ma = (i1:long, i2:long) { make_string(repeat(tolong(l[i1])-tolong(l[i2]), 1))}; 
+    let ms = (d:dynamic, s:long, e:long) { make_string(array_slice(d, s, e)) };   
+    let mc = m has '...';
+    print s=split(split(replace_regex(m, @'[\s\?]+', ' '),substring(K,9,3))[1], ' ')
+    | mv-expand with_itemindex=r s to typeof(string) | serialize 
+    | where r in (l)
+    | extend s = iif(r-1 == prev(r), replace_string(strcat(prev(s), s),'o','ou'), s)
+    | where (r+1 != next(r))
+    | summarize s=strcat_array(make_list(s), iff(mc, '+%2B', ' '))
+    | extend k = series_subtract(series_add(to_utf8(K), l), repeat(23, 10))
+    | project result=iif(mc, strcat(ms(k,0,3), ma(8,2), ms(k,4,6), ms(l,8,8), ms(k,7,7), ma(8,0), s), s)
+};
+ReadMessage(
+```
+PS:
+Feeling uncomfortable and wondering about an elephant in the room: why would I help you?
+Nothing escapes you, ha?
+Let’s put it this way: we live in a circus full of competition. I can use some of your help, and nothing breaks if you use mine... You see, everything is about symbiosis.
+Anyway, what do you have to lose? Look on an illustrated past, fast forward N days and realize the future is here.
+```,
+h@'wytaPUJM!PS:2,7,17,29,42,49,58,59,63'
+)
+// the result is a bing search from which we can extract the historical event's year
+
+//using the following code we can calculate the heist date:
+let Date1 = datetime(2021-01-15 10:00); // TODO: replace with your date from the image
+let YYYY = 1001;  // TODO: reaplace with your year from the historical event
+print(Date1+(YYYY%1000)*1d)

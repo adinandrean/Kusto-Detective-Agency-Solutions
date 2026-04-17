@@ -1,0 +1,6 @@
+.execute database script <|
+.create-merge table ChatLogs (Timestamp:datetime, Message:string)  
+//clear any previously ingested data if such exists
+.clear table ChatLogs data
+.ingest into table ChatLogs ('https://kustodetectiveagency.blob.core.windows.net/digitown-chat/log_00000.csv.gz')
+.ingest into table ChatLogs ('https://kustodetectiveagency.blob.core.windows.net/digitown-chat/log_00001.csv.gz')
