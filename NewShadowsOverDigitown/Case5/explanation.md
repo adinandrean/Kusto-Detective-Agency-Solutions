@@ -22,14 +22,33 @@ The `ChatLogs` table contained unstructured text messages. I implemented an iter
         isnotempty(destType) and destType has "channel", "CM",
         ...
     )
-
+```
 ## 🔍 Phase 2: Identifying the Gang
-To find the 4 members, I applied several behavioral filters:
+The heist team was characterized by minimal interaction and high secrecy. I isolated them using a strict process of elimination:
 
-Group Size: Isolated channels where exactly 4 unique users joined.
+1. **Group Size**: Filtered for channels containing exactly 4 unique users.
 
-Exclusivity: Filtered for users who only joined one channel during the entire log period, suggesting a dedicated "War Room."
+2. **Exclusivity**: Focused on users who joined only one channel (the heist "War Room").
 
-Communication Hygiene: Used a leftanti join to remove users who sent Direct Messages (DMs) to anyone else, as the heist team was described as having "minimal interaction with the external world."
+3. **Behavioral Cleaning**: Used leftanti join to eliminate users engaging in DMs with outsiders, ensuring the group was a closed loop.
 
-The "Sync" Pattern: In the final 3 candidate channels, I looked for rhythmic behavior. Channel cf053de3c7b showed 4 members posting exactly one message each in quick succession every two days—a classic "sync-up" behavior.
+4. **Temporal Analysis**: Identified channel cf053de3c7b by observing a "sync" pattern—members posted sequentially every second day at specific times.
+
+## 💻 Phase 3: Forensic Infiltration (SneakInto)
+After extracting the **Login IPs** for the 4 suspects, I used the *SneakInto* utility to analyze their local files. The evidence gathered was:
+
+
+* **Image Metadata (EXIF)**: Extracted *Date1* and *GPS* coordinates from image3.jpg.
+
+* **Advanced Cryptography**: I applied the custom *ReadMessage* function to the "PS:" section of the challenge description using the key from the previous case. This revealed a hidden Bing search query pointing to a specific historical year (YYYY).
+
+* **Cryptographic Riddle**: Decoded a formula from an email: Date1 + (YYYY % 1000) days.
+
+## 🛠️ Technical Skills Demonstrated
+* **Data Engineering**: Multi-stage *parse* and *coalesce* to structure "dirty" logs.
+
+* **Advanced Filtering**: Using *make_set*, *mv-expand*, and *leftanti* joins for social graph analysis.
+
+* **Security Mindset**: Correlating Chat Metadata with Login IPs (SIEM-like investigation).
+
+* **Functional Programming**: Executing complex user-defined functions for decryption.
