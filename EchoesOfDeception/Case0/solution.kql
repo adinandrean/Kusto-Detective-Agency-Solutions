@@ -1,0 +1,24 @@
+//STEP 1: explore the data
+DetectiveCases
+| take 10 
+
+//we notice that the Properties column is empty for those records. Let's check what data it contains
+//STEP 2: data from Properties column
+DetectiveCases
+| where isnotempty(Properties)
+| take 10
+// this column contains a json with the bounty for each case()
+
+//STEP 3: extract the bounty value from the Properties column
+let bountyPrice = DetectiveCases
+| where EventType == "CaseOpened"
+| extend Bounty = toint(Properties.Bounty);
+//STEP 4: combine the bounty with the closed cases
+DetectiveCases
+| where EventType == "CaseSolved"
+| join kind=inner (bountyPrice) on CaseId
+//STEP 5: take only the first detective that solved the case
+| summarize arg_min(Timestamp, Bounty, DetectiveId) by CaseId
+//STEP 6: sum the bounty for each detective
+| summarize TotalBounty = sum(Bounty) by DetectiveId
+| top 1 by TotalBounty desc
