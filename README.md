@@ -25,7 +25,7 @@ In these solutions, I make extensive use of:
 ---
 
 ## 📂 Repository Structure
-
+### New Shadows over Digitown
 | Case | Title | Key Concept Used | Documentation | Solution Code |
 | :--- | :--- | :--- | :--- | :--- |
 | **0** | Onboarding | Basic KQL & Summation | [Explanation](./NewShadowsOverDigitown/Case0/explanation.md) | [View Code](./NewShadowsOverDigitown/Case0/solution.kql) |
