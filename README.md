@@ -35,6 +35,10 @@ In these solutions, I make extensive use of:
 | **4** | Ready to play? | H3 Geospatial, Window Functions & Cryptography | [Explanation](./NewShadowsOverDigitown/Case4/explanation.md) | [View Code](./NewShadowsOverDigitown/Case4/solution.kql) |
 | **5** | Big Heist | Forensics, Social Graph & Decryption | [Explanation](./NewShadowsOverDigitown/Case5/explanation.md) | [View Code](./NewShadowsOverDigitown/Case5/solution.kql) |
 
+### Echoes of Deception
+| Case | Title | Key Concept Used | Documentation | Solution Code |
+| :--- | :--- | :--- | :--- | :--- |
+| **0** | Onboarding | Basic KQL & Summation | [Explanation](./EchoesOfDeception/Case0/explanation.md) | [View Code](./EchoesOfDeception/Case0/solution.kql) |
 ---
 
 ## 🚀 How to Run These Queries
