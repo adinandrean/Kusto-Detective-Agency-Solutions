@@ -1,0 +1,36 @@
+//STEP 1: analyze the data in the tables
+Costs
+| take 10
+
+Consumption
+| take 10 
+
+//STEP 2: since we suspect extra charges, let's see how many consumption records we found
+// for each household (we expect 2*30=60)
+Consumption
+| summarize count() by HouseholdId
+| distinct count_
+| order by count_ asc 
+// the results will range from 60 up to 108
+
+//STEP 3: let's see how does extra records looks like
+let suspHH = Consumption
+| summarize count() by HouseholdId
+| where count_ > 74;
+Consumption
+| where HouseholdId in (suspHH)
+| order by HouseholdId, MeterType, Timestamp asc 
+// we can see that there are two cases of extra records:
+// 1. there are records with the same timestamp but negative value
+// 2. there are records with the same timestamp and same value
+
+//STEP 4: let's eliminate the first case by removing records with negative values
+Consumption
+| where Consumed > 0
+//STEP 5: let's eliminate the second case by removing duplicated records with the same timestamp and same HouseholdId
+| summarize Consumed = take_any(Consumed) by HouseholdId, MeterType, Timestamp
+//STEP 6: sum the consumption for each meter type and calculate the total cost
+| summarize TotalConsumed = sum(Consumed) by MeterType
+| join kind=inner Costs on MeterType
+| extend totalCost = Cost*TotalConsumed
+| summarize sum(totalCost)
