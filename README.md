@@ -39,6 +39,7 @@ In these solutions, I make extensive use of:
 | Case | Title | Key Concept Used | Documentation | Solution Code |
 | :--- | :--- | :--- | :--- | :--- |
 | **0** | Onboarding | Basic KQL & Summation | [Explanation](./EchoesOfDeception/Case0/explanation.md) | [View Code](./EchoesOfDeception/Case0/solution.kql) |
+| **1** | To bill or not to bill? | Data deduplication & Joins|  [Explanation](./EchoesOfDeception/Case1/explanation.md) | [View Code](./EchoesOfDeception/Case1/solution.kql) |
 ---
 
 ## 🚀 How to Run These Queries
